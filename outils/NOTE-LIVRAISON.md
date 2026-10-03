@@ -20,7 +20,15 @@ NODE_PATH=$(npm root -g) node outils/tests/navigateur.test.js  # parcours Playwr
 
 Au total : 45 questions et 1 tracé, pour une durée conseillée de 2 h.
 
-Les documents sont DP1 (présentation et schéma cinématique), DT1 (vue d'ensemble cotée), DT2 (palan), DT3 (tirant), DT4 (flèche isolée) et DT5 (colonne isolée). Ils sont découpés dans la figure d'origine (`outils/images/fig36-source.jpg`) et pèsent environ 130 Ko d'images au total.
+Les documents sont DP1 (présentation et schéma cinématique), DT1 (vue d'ensemble cotée), DT2 (palan), DT3 (tirant), DT4 (flèche isolée) et DT5 (colonne isolée).
+
+Ils sont découpés par `outils/decouper.py` dans le scan haute définition `outils/images/potence-source.jpg` (2 271 × 1 907 px). Le traitement est le suivant :
+- passage en niveaux de gris ;
+- rehaussement des niveaux (35 % → 72 %), ce qui fait disparaître le texte du verso visible par transparence ;
+- effacement des numéros de figure ;
+- export en PNG quantifié à 16 niveaux, sur 1 600 px de large au plus.
+
+Les images pèsent environ 145 Ko au total. Le fond du tracé (DR1) est la flèche isolée à pleine résolution (1 238 × 572 px). La correction est recalée sur ce fond : A (72 ; 353), M (932 ; 353), B (1 099 ; 296), et le point de concours I tombe à (932 ; 243,5), exactement sur la droite BD imprimée.
 
 ## Erreur corrigée dans l'ancienne version de la page (importante)
 
@@ -52,9 +60,9 @@ La « vérification globale » de l'ancienne page prenait 2,94 m comme bras de l
 
 ## Coquilles du document source
 
-- Sur la flèche isolée, l'action du palan est notée « M<sub>0/3</sub> = P ». L'étiquette a été effacée de l'image et redessinée en « M<sub>6/3</sub> = P (500 daN) ».
 - Les numéros de figure (« Fig. 36-a » à « Fig. 36-e »), la légende d'origine et le titre « Exercice 15 » ont été retirés, pour ne laisser aucune référence à la source.
-- Le schéma cinématique porte une annotation illisible (« 0+5+64 ») : elle est signalée ici et laissée telle quelle.
+- Le schéma cinématique regroupe le bâti sous l'annotation « 0 + 5 + 6 ». Le support supérieur (4) n'y figure pas, et le palan (6) n'appartient pas au bâti : on attendrait plutôt « 0 + 4 + 5 ». C'est probablement une coquille du source ; elle est signalée ici et laissée telle quelle.
+- La première version de la page utilisait une image basse définition en couleur. Sur cette image, l'action du palan sur la flèche isolée était notée « M<sub>0/3</sub> ». Le scan haute définition porte bien « M<sub>6/3</sub> = P ». L'étiquette d'origine est donc conservée, sans retouche.
 
 ## Décisions d'interprétation et de tolérance
 

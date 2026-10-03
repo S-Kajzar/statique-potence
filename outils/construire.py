@@ -18,14 +18,17 @@ GABARIT = open(os.path.join(ICI, "gabarit-exercice-interactif.html"), encoding="
 
 
 def img(nom):
+    mime = "image/png" if nom.endswith(".png") else "image/jpeg"
     with open(os.path.join(ICI, "images", nom), "rb") as f:
-        return "data:image/jpeg;base64," + base64.b64encode(f.read()).decode()
+        return f"data:{mime};base64," + base64.b64encode(f.read()).decode()
 
 
 def idim(nom):
-    """Largeur et hauteur d'un JPEG (lecture des marqueurs SOF)."""
+    """Largeur et hauteur d'une image PNG (en-tête IHDR) ou JPEG (marqueurs SOF)."""
     with open(os.path.join(ICI, "images", nom), "rb") as f:
         d = f.read()
+    if d[:8] == b"\x89PNG\r\n\x1a\n":
+        return int.from_bytes(d[16:20], "big"), int.from_bytes(d[20:24], "big")
     i = 2
     while i < len(d):
         if d[i] != 0xFF:
@@ -580,8 +583,8 @@ CONTENU["4"][0] = CONTENU["4"][0].replace("@@COLONNE@@", COLONNE_FIG)
 # ===================================================================
 #  Tracé (bloc HTML)
 # ===================================================================
-FL_W, FL_H = idim("fleche-dr.jpg")
-FL_SCALE = 2  # le fond est déclaré en double résolution (coordonnées DECOR)
+FL_W, FL_H = idim("fleche.png")
+FL_SCALE = 1  # coordonnées DECOR = pixels du fond
 
 SK_HTML = f"""
       <div class="qbar" role="group" aria-label="Q2.12"><div class="qb-num">Q2.12</div><div class="qb-docs">Documents à consulter : <button type="button" class="doc-chip" data-doc="DT4" aria-pressed="false">DT4</button></div><div class="qb-ans">Répondre : sur le DR1</div></div>
@@ -617,7 +620,7 @@ SK_HTML = f"""
                 <button type="button" class="btn-drprint" data-act="drprint">Imprimer les DR</button>
                 <button type="button" data-act="full" aria-pressed="false">Plein écran</button>
               </div>
-              <div class="sk-stage"><img class="sk-bg" src="{img('fleche-dr.jpg')}" width="{FL_W * FL_SCALE}" height="{FL_H * FL_SCALE}" alt="" hidden>
+              <div class="sk-stage"><img class="sk-bg" src="{img('fleche.png')}" width="{FL_W * FL_SCALE}" height="{FL_H * FL_SCALE}" alt="" hidden>
                 <canvas role="img" aria-label="Zone de tracé sur le document réponse DR1 : flèche (3) isolée"></canvas></div>
               <div class="sk-foot">
                 <button type="button" class="btn btn-sketch">Valider mon tracé</button>
@@ -672,34 +675,32 @@ def duree_txt(m):
 # ===================================================================
 #  Décor du tracé (coordonnées du fond déclaré 1080 × 500)
 # ===================================================================
-PX_M = (818 - 68) / 2.94           # pixels par mètre sur le fond
-IY = 316 - (YB + (XB - XM) / TAN) * PX_M
+# Repères relevés sur fleche.png : A (72 ; 353), M (932 ; 353), B (1099 ; 296)
+PX_M = (932 - 72) / 2.94           # pixels par mètre sur le fond
+IY = 353 - (YB + (XB - XM) / TAN) * PX_M
+PENTE = 1 / TAN                    # pente de (BD) sur le dessin
+PENTE_AI = (353 - IY) / (932 - 72)
 DECOR_JS = f"""  var DECOR = {{
     FLECHE: {{
-      pad: {{ t: 16, r: 16, b: 16, l: 130 }}, rs: 2.4,
+      pad: {{ t: 16, r: 16, b: 16, l: 130 }}, rs: 2,
       decorate: function (c) {{
-        // action connue du palan sur la flèche (l'étiquette d'origine a été effacée)
-        vlabel(c, 640, 392, "M", "6/3", "#B42318", 24);
-        text(c, "= P", 706, 394, "#B42318", 22, "left", "700");
-        text(c, "(500 daN)", 640, 436, "#B42318", 20, "left", "600");
-        // repère
-        text(c, "Repère", -112, 210, "#000", 18, "left", "700");
-        arrow(c, -100, 316, -30, 316, "#000", 2); arrow(c, -100, 316, -100, 246, "#000", 2);
-        vlabel(c, -26, 334, "x", "", "#000", 18); vlabel(c, -90, 248, "y", "", "#000", 18);
+        text(c, "Repère", -116, 250, "#000", 22, "left", "700");
+        arrow(c, -100, 353, -30, 353, "#000", 2); arrow(c, -100, 353, -100, 283, "#000", 2);
+        vlabel(c, -26, 375, "x", "", "#000", 24); vlabel(c, -90, 285, "y", "", "#000", 24);
       }},
       correction: function (c) {{
-        var I = [818, {IY:.1f}];
-        line(c, 818, 470, 818, 120, CORR, 2.4, [10, 6]);
-        line(c, 962, 268, 560, 268 - 402 * 0.3057, CORR, 2.4);
-        line(c, 68, 316, 960, 316 - 892 * (316 - I[1]) / 750, CORR, 2.4, [10, 6]);
+        var I = [932, {IY:.1f}];
+        line(c, 932, 540, 932, 140, CORR, 2.4, [10, 6]);
+        line(c, 1099, 296, 640, 296 - 459 * {PENTE:.4f}, CORR, 2.4);
+        line(c, 72, 353, 1080, 353 - 1008 * {PENTE_AI:.4f}, CORR, 2.4, [10, 6]);
         dot(c, I[0], I[1], 7, CORR);
-        text(c, "I", I[0] - 26, I[1] - 22, CORR, 26, "left", "800");
-        arrow(c, 68, 316, 230, 316 - 162 * (316 - I[1]) / 750, CORR, 4);
-        vlabel(c, 150, 270, "A", "1/3", CORR, 24, "center");
-        text(c, "≈ 7°", 250, 334, CORR, 20, "left", "700");
-        arrow(c, 962, 268, 962 - 110, 268 - 110 * 0.3057, CORR, 4);
-        vlabel(c, 905, 205, "B", "2/3", CORR, 22, "center");
-        text(c, "Correction", 880, 40, CORR, 20, "left", "800");
+        text(c, "I", I[0] - 34, I[1] - 26, CORR, 34, "left", "800");
+        arrow(c, 72, 353, 262, 353 - 190 * {PENTE_AI:.4f}, CORR, 4);
+        vlabel(c, 160, 288, "A", "1/3", CORR, 32, "center");
+        text(c, "≈ 7°", 300, 290, CORR, 28, "left", "800");
+        arrow(c, 1099, 296, 1099 - 120, 296 - 120 * {PENTE:.4f}, CORR, 4);
+        vlabel(c, 1010, 200, "B", "2/3", CORR, 30, "center");
+        text(c, "Correction", 990, 40, CORR, 28, "left", "800");
       }}
     }}
   }};
@@ -740,11 +741,11 @@ APP = remplacer(APP, "<p>Quatre pages, une par document, à imprimer en A4 paysa
 
 DOCS = [
     ("DP1", "Présentation de la potence", "Dossier présentation", None),
-    ("DT1", "Vue d'ensemble cotée", "Dossier technique", "ensemble.jpg"),
-    ("DT2", "Palan (6) isolé", "Dossier technique", "palan.jpg"),
-    ("DT3", "Tirant (2) isolé", "Dossier technique", "tirant.jpg"),
-    ("DT4", "Flèche (3) isolée", "Dossier technique", "fleche-dr.jpg"),
-    ("DT5", "Colonne (1) isolée", "Dossier technique", "colonne.jpg"),
+    ("DT1", "Vue d'ensemble cotée", "Dossier technique", "ensemble.png"),
+    ("DT2", "Palan (6) isolé", "Dossier technique", "palan.png"),
+    ("DT3", "Tirant (2) isolé", "Dossier technique", "tirant.png"),
+    ("DT4", "Flèche (3) isolée", "Dossier technique", "fleche.png"),
+    ("DT5", "Colonne (1) isolée", "Dossier technique", "colonne.png"),
 ]
 DOC_ALT = {
     "DT1": "Vue d'ensemble cotée de la potence : mur (0), colonne (1), tirant (2), flèche (3), supports (4) et (5), palan (6). Cotes 1 470, 260, 240, 450, 2 940, 570 et 200 mm, angle 73°.",
@@ -766,7 +767,7 @@ PRESENTATION = f"""<div class="doc-text"><h3>Potence à tirant sur mur</h3>
         <p>La colonne est guidée en rotation autour de l'axe vertical <var>EF</var> par deux supports <strong>(4)</strong> et <strong>(5)</strong> fixés au mur <strong>(0)</strong>. Le support supérieur (4) laisse la colonne libre de coulisser verticalement : l'action en <var>E</var> est supposée horizontale.</p>
         <p>Un palan <strong>(6)</strong> suspendu en <var>M</var> soulève une charge de poids {V('P')} = 500 daN. Les poids des solides sont négligés.</p>
         <p><strong>Objectif :</strong> déterminer, pour la position représentée, les actions exercées en <var>A</var>, <var>B</var>, <var>D</var>, <var>E</var> et <var>F</var>, toutes schématisées par des vecteurs-forces passant par ces points.</p></div>
-      <img class="doc-img" src="{img('schema.jpg')}" alt="Schéma cinématique : colonne 1 en liaison avec le mur en E et F, tirant 2 entre D et B, flèche 3 entre A et B." width="{idim('schema.jpg')[0]}" height="{idim('schema.jpg')[1]}">
+      <img class="doc-img" src="{img('schema.png')}" alt="Schéma cinématique : colonne 1 en liaison avec le mur en E et F, tirant 2 entre D et B, flèche 3 entre A et B." width="{idim('schema.png')[0]}" height="{idim('schema.png')[1]}">
       <p class="doc-cap">Schéma cinématique de la potence.</p>"""
 
 docs_html = []
@@ -799,8 +800,8 @@ for p in PARTS:
   </section>""")
 
 TITRE = "Potence à tirant sur mur"
-W1, H1 = idim("ensemble.jpg")
-HERO = img("ensemble.jpg")
+W1, H1 = idim("ensemble.png")
+HERO = img("ensemble.png")
 
 HTML = f"""<!DOCTYPE html>
 <html lang="fr">
